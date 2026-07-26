@@ -16,7 +16,7 @@ class Parsers:
     @staticmethod
     def battery(payload: bytes) -> BatteryStatus:
         left = right = 0
-        i = 0
+        i = 1
         while i < len(payload) - 1:
             tag, val = payload[i], payload[i + 1]
             if tag == 0x02:
