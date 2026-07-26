@@ -1,3 +1,12 @@
+# Nothing X PC (Unofficial)
+
+An unofficial implementation of the protocols used by Nothing X for Nothing Ear devices.
+
+(... more coming soon.)
+
+## Use of AI
+All code has been written manually. AI was used to help write the documentation and commit messages.
+
 ## License
 
 Nothing X PC is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
