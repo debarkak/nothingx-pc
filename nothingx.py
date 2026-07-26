@@ -6,22 +6,43 @@ from nothingx import Device
 from nothingx.errors import NothingError
 
 
+HELP = """\
+usage: python3 nothingx.py [--debug] <command> [...]
+
+commands:
+  battery              left and right earbud battery levels
+  firmware             firmware version string
+  info                 device name, MAC, and firmware
+  anc <mode>           set noise control mode
+                         high, mid, low, adaptive, transparency, off
+  find <side>          ring an earbud to find it
+                         left, right, both, stop
+
+options:
+  --debug              print raw Bluetooth packets
+  -h, --help           show this message and exit\
+"""
+
+
 def build_parser():
     p = argparse.ArgumentParser(
         prog="nothingx",
-        description="Control Nothing Ear earbuds from your PC."
+        description=HELP,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        add_help=False,
     )
-    p.add_argument("--debug", action="store_true", help="show raw Bluetooth traffic")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    p.add_argument("-h", "--help", action="store_true")
+    p.add_argument("--debug", action="store_true")
+    sub = p.add_subparsers(dest="cmd")
 
-    sub.add_parser("battery",  help="battery levels")
-    sub.add_parser("firmware", help="firmware version")
-    sub.add_parser("info",     help="device info")
+    sub.add_parser("battery")
+    sub.add_parser("firmware")
+    sub.add_parser("info")
 
-    anc = sub.add_parser("anc", help="set ANC mode")
+    anc = sub.add_parser("anc")
     anc.add_argument("mode", choices=["high", "mid", "low", "adaptive", "transparency", "off"])
 
-    find = sub.add_parser("find", help="ring earbuds")
+    find = sub.add_parser("find")
     find.add_argument("side", choices=["left", "right", "both", "stop"])
 
     return p
@@ -62,6 +83,10 @@ def run(args, ear: Device):
 def main():
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.help or not args.cmd:
+        print(HELP)
+        sys.exit(0)
 
     level = logging.DEBUG if args.debug else logging.WARNING
     logging.basicConfig(level=level, format="%(name)s: %(message)s")

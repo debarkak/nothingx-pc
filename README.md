@@ -8,4 +8,4 @@ Nothing X PC is an independent, community-developed open-source project.
 
 This project is **not affiliated with, endorsed by, sponsored by, or associated with Nothing Technology Limited.**
 
-"Nothing", "Nothing Ear", "Nothing X", the Nothing logo, and other related names, logos, and trademarks are the property of Nothing Technology Limited. They are used solely to identify compatible hardware and software.
+"Nothing", "Nothing Ear", "Nothing X", the Nothing logo, and other related names, logos, and trademarks are the property of Nothing Technology Limited.
