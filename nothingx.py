@@ -54,13 +54,19 @@ def build_parser():
     return p
 
 
+def _fmt_case(level: int) -> str:
+    if level == 0:
+        return "Case:  0% (case disconnected/battery empty)"
+    return f"Case:  {level}%"
+
+
 def run(args, ear: Device):
     if args.cmd == "battery":
         b = ear.battery()
         print(f"Left:  {b.left}%")
         print(f"Right: {b.right}%")
         if b.case is not None:
-            print(f"Case:  {b.case}%")
+            print(_fmt_case(b.case))
 
     elif args.cmd == "firmware":
         print(ear.info.firmware())
@@ -94,7 +100,8 @@ def run(args, ear: Device):
             for b in ear.battery.watch(timeout=args.timeout):
                 parts = [f"Left: {b.left}%", f"Right: {b.right}%"]
                 if b.case is not None:
-                    parts.append(f"Case: {b.case}%")
+                    case_str = "Case: 0% (case disconnected/battery empty)" if b.case == 0 else f"Case: {b.case}%"
+                    parts.append(case_str)
                 print("  " + "  ".join(parts))
         except KeyboardInterrupt:
             pass
