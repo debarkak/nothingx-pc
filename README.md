@@ -2,10 +2,32 @@
 
 An unofficial implementation of the protocols used by Nothing X for Nothing Ear devices.
 
-(... more coming soon.)
+## Features
+
+| Feature | Category | Status |
+|---|---|---|
+| Battery levels (left / right) | Monitoring | ✅ Working |
+| Case battery | Monitoring | 🔴 Not implemented yet |
+| In-ear detection | Monitoring | 🔴 Not implemented yet |
+| Firmware version | Info | ✅ Working |
+| Device info | Info | ✅ Working |
+| ANC control (high / mid / low / adaptive / off) | Audio | ✅ Working |
+| Transparency mode | Audio | ✅ Working |
+| Equalizer / Custom EQ | Audio | 🔴 Not implemented yet |
+| Spatial audio | Audio | 🔴 Not implemented yet |
+| Enhanced bass | Audio | 🔴 Not implemented yet |
+| Find earbuds (left / right / both / stop) | Utility | ✅ Working |
+| Low latency mode | Utility | 🔴 Not implemented yet |
+| Multipoint / dual connection | Connectivity | 🔴 Not implemented yet |
+| Gesture configuration | Settings | 🔴 Not implemented yet |
+
+| Symbol | Meaning |
+|---|---|
+| ✅ | Implemented and working |
+| 🔴 | Known protocol command, not exposed yet |
 
 ## Use of AI
-All code has been written manually. AI was used to help write the documentation and commit messages.
+Majority code has been written manually. AI was used to help write the documentation and commit messages, and for some assistance.
 
 ## License
 
