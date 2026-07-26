@@ -2,6 +2,8 @@
 
 An unofficial implementation of the protocols used by Nothing X for Nothing Ear devices.
 
+(... more coming soon.)
+
 ## Features
 
 | Feature | Category | Status |
