@@ -8,8 +8,7 @@ An unofficial implementation of the protocols used by Nothing X for Nothing Ear 
 
 | Feature | Category | Status |
 |---|---|---|
-| Battery levels (left / right) | Monitoring | ✅ Working |
-| Case battery | Monitoring | 🔴 Not implemented yet |
+| Battery levels (left / right / case) | Monitoring | ✅ Working |
 | In-ear detection | Monitoring | 🔴 Not implemented yet |
 | Firmware version | Info | ✅ Working |
 | Device info | Info | ✅ Working |
