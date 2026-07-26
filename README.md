@@ -19,14 +19,18 @@ An unofficial implementation of the protocols used by Nothing X for Nothing Ear 
 | Spatial audio | Audio | 🔴 Not implemented yet |
 | Enhanced bass | Audio | 🔴 Not implemented yet |
 | Find earbuds (left / right / both / stop) | Utility | ✅ Working |
+| Eartip fit test | Utility | ⚪ Needs reverse engineering |
 | Low latency mode | Utility | 🔴 Not implemented yet |
 | Multipoint / dual connection | Connectivity | 🔴 Not implemented yet |
 | Gesture configuration | Settings | 🔴 Not implemented yet |
+| GUI | Interface | 🔴 Not implemented yet |
+| Windows compatibility | Platform | 🔴 Not implemented yet |
 
 | Symbol | Meaning |
 |---|---|
 | ✅ | Implemented and working |
 | 🔴 | Known protocol command, not exposed yet |
+| ⚪ | Planned, but needs further reverse engineering first |
 
 ## Use of AI
 Majority code has been written manually. AI was used to help write the documentation and commit messages, and for some assistance.
