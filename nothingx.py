@@ -10,13 +10,15 @@ HELP = """\
 usage: python3 nothingx.py [--debug] <command> [...]
 
 commands:
-  battery              left and right earbud battery levels
+  battery              left, right, and case (when available) battery levels
   firmware             firmware version string
   info                 device name, MAC, and firmware
   anc <mode>           set noise control mode
                          high, mid, low, adaptive, transparency, off
   find <side>          ring an earbud to find it
                          left, right, both, stop
+  watch [--timeout N]  monitor live battery updates (includes case battery)
+                         waits for push events (lid open/close) for N seconds
 
 options:
   --debug              print raw Bluetooth packets
@@ -45,6 +47,10 @@ def build_parser():
     find = sub.add_parser("find")
     find.add_argument("side", choices=["left", "right", "both", "stop"])
 
+    watch = sub.add_parser("watch")
+    watch.add_argument("--timeout", type=float, default=60.0,
+                       help="seconds to listen for battery push events (default: 60)")
+
     return p
 
 
@@ -53,6 +59,8 @@ def run(args, ear: Device):
         b = ear.battery()
         print(f"Left:  {b.left}%")
         print(f"Right: {b.right}%")
+        if b.case is not None:
+            print(f"Case:  {b.case}%")
 
     elif args.cmd == "firmware":
         print(ear.info.firmware())
@@ -78,6 +86,18 @@ def run(args, ear: Device):
         elif s == "both":  ear.find.both()
         elif s == "stop":  ear.find.stop()
         print(f"find → {s}")
+
+    elif args.cmd == "watch":
+        print(f"Monitoring battery (Ctrl-C to stop, timeout={args.timeout:.0f}s)...")
+        print("Tip: open/close the case lid to trigger a case battery update.")
+        try:
+            for b in ear.battery.watch(timeout=args.timeout):
+                parts = [f"Left: {b.left}%", f"Right: {b.right}%"]
+                if b.case is not None:
+                    parts.append(f"Case: {b.case}%")
+                print("  " + "  ".join(parts))
+        except KeyboardInterrupt:
+            pass
 
 
 def main():
