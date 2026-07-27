@@ -8,7 +8,7 @@ class FitCommands:
     def __init__(self, session):
         self._s = session
 
-    def run(self, timeout=10.0) -> FitTestResult:
+    def run(self, timeout=10.0, step_callback=None) -> FitTestResult:
         # send the start command and wait for the ACK
         self._s.send(Cmd.FIT_TEST, Dir.SET, b"\x01")
         try:
@@ -17,11 +17,14 @@ class FitCommands:
             pass
 
         # now listen for the unsolicited result packet (dir=0xE0, cmd=0x0D)
-        self._s._conn.sock.settimeout(0.3)
+        self._s._conn.sock.settimeout(0.1)
         parser = _StreamParser()
         deadline = time.time() + timeout
 
         while time.time() < deadline:
+            if step_callback:
+                step_callback()
+                
             try:
                 data = self._s._conn.recv(4096)
                 if data:

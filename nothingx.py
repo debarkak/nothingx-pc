@@ -78,15 +78,72 @@ def run(args, ear: Device):
         print(f"Firmware: {ear.info.firmware()}")
 
     elif args.cmd == "fit":
-        print("Running eartip fit test — keep both earbuds in your ears...")
+        print("Running eartip fit test — keep both earbuds in your ears...\n")
+        print("\n\n\n\n\n") # Space for earbuds + text
+        
+        reset = "\033[0m"
+        
+        def build_frames(dot_color, reverse=False):
+            dot = f"{dot_color}@{reset}"
+            frames = [
+                ["  .-.  ", f" ( {dot} ) ", "  | |  ", "  | |  ", "  '-'  "],
+                ["  .-.  ", f" ({dot}  ) ", "  | |  ", "  | |  ", "  '-'  "],
+                ["   .   ", "  ( )  ", "   |   ", "   |   ", "   '   "],
+                ["  .-.  ", " (   ) ", "  | |  ", "  | |  ", "  '-'  "],
+                ["   .   ", "  ( )  ", "   |   ", "   |   ", "   '   "],
+                ["  .-.  ", f" (  {dot}) ", "  | |  ", "  | |  ", "  '-'  "]
+            ]
+            return [frames[0], frames[5], frames[4], frames[3], frames[2], frames[1]] if reverse else frames
+
+        l_frames = build_frames("\033[90m") # Dark gray
+        r_frames = build_frames("\033[31m", reverse=True) # Red
+
+        anim_idx = 0
+        last_step = 0
+        def step():
+            nonlocal anim_idx, last_step
+            import time
+            if time.time() - last_step < 0.15:
+                return
+            last_step = time.time()
+            
+            sys.stdout.write("\033[6A") # Move up 6 lines (5 for buds + 1 for text)
+            frame_l = l_frames[anim_idx % 6]
+            frame_r = r_frames[anim_idx % 6]
+            for i in range(5):
+                sys.stdout.write(f"      {frame_l[i]}          {frame_r[i]}\033[K\n")
+            
+            dots = "." * ((anim_idx % 3) + 1)
+            sys.stdout.write(f"        Testing fit{dots:<3} \033[K\n")
+            sys.stdout.flush()
+            anim_idx += 1
+
         try:
-            result = ear.fit.run()
+            result = ear.fit.run(step_callback=step)
         except TimeoutError as e:
+            sys.stdout.write("\033[6A\033[J")
             print(f"Error: {e}")
         else:
-            def _side(code):
-                return {0: "✓ Good seal", 1: "✗ Poor seal", 2: "✗ Not in ear"}.get(code, f"✗ Unknown ({code})")
-            print(f"Left:  {_side(result.left)}")
+            def get_color(c):
+                return "\033[97m" if c == 0 else "\033[33m" if c == 1 else "\033[31m"
+                
+            def colored_earbud(c):
+                dot = f"{c}@{reset}"
+                return [f"{c}  .-.  {reset}", f"{c} ( {dot} ){reset}", f"{c}  | |  {reset}", f"{c}  | |  {reset}", f"{c}  '-'  {reset}"]
+
+            final_l = colored_earbud(get_color(result.left))
+            final_r = colored_earbud(get_color(result.right))
+            
+            sys.stdout.write("\033[6A")
+            for i in range(5):
+                sys.stdout.write(f"      {final_l[i]}          {final_r[i]}\033[K\n")
+            sys.stdout.write("      \033[1mTest Complete!\033[0m\033[K\n")
+            sys.stdout.flush()
+
+            def _side(c):
+                return "\033[97m✓ Good seal\033[0m" if c == 0 else "\033[33m! Moderate/Poor seal\033[0m" if c == 1 else "\033[31m✗ Awful seal / Not in ear\033[0m"
+                
+            print(f"\nLeft:  {_side(result.left)}")
             print(f"Right: {_side(result.right)}")
             if result.left_ok and result.right_ok:
                 print("\033[1mPerfect fit — you're ready!\033[0m")
