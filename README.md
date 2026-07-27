@@ -10,18 +10,18 @@ An unofficial implementation of the protocols used by Nothing X for Nothing Ear 
 |---|---|---|
 | Battery levels (left / right / case) | Monitoring | ✅ Working |
 | Battery push events (live updates) | Monitoring | ✅ Working |
-| In-ear detection | Monitoring | 🟡 Protocol known, not exposed yet |
+| In-ear detection (Toggle setting) | Settings | 🟡 Protocol known, not exposed yet |
 | Firmware version | Info | ✅ Working |
 | Device info (serial, firmware) | Info | ✅ Working |
 | ANC (high / mid / low / adaptive / transparency / off) | Audio | ✅ Working |
 | Equalizer / Custom EQ | Audio | ⚪ Needs further reverse engineering |
-| Spatial audio | Audio | ⚪ Needs further reverse engineering |
+| Spatial audio (Toggle setting) | Audio | ⚪ Needs further reverse engineering |
 | Enhanced bass | Audio | ⚪ Needs further reverse engineering |
 | Find earbuds (left / right / both / stop) | Utility | ✅ Working |
 | Eartip fit test | Utility | ✅ Working |
-| Low latency mode | Utility | 🟡 Protocol known, not exposed yet |
+| Low latency mode (Toggle setting) | Settings | 🟡 Protocol known, not exposed yet |
 | Gesture configuration | Settings | 🟡 Protocol known, not exposed yet |
-| Multipoint / dual connection | Connectivity | ⚪ Needs further reverse engineering |
+| Dual connection (Toggle setting) | Settings | ⚪ Needs further reverse engineering |
 | GUI | Interface | 🔴 Not started |
 
 | Symbol | Meaning |
