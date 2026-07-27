@@ -2,6 +2,8 @@ from enum import IntEnum
 
 class Cmd(IntEnum):
     FIND_MY       = 0x02
+    FIT_TEST      = 0x14  # SET [0x01]=start; result pushed as unsolicited 0xE00D
+    FIT_RESULT    = 0x0D  # unsolicited push dir=0xE0; payload[8]=left, payload[9]=right (0=good,1=poor)
     IN_EAR        = 0x0E
     DEVICE_INFO   = 0x06
     BATTERY       = 0x07

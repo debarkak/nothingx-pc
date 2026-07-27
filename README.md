@@ -9,27 +9,27 @@ An unofficial implementation of the protocols used by Nothing X for Nothing Ear 
 | Feature | Category | Status |
 |---|---|---|
 | Battery levels (left / right / case) | Monitoring | ✅ Working |
-| In-ear detection | Monitoring | 🔴 Not implemented yet |
+| Battery push events (live updates) | Monitoring | ✅ Working |
+| In-ear detection | Monitoring | 🟡 Protocol known, not exposed yet |
 | Firmware version | Info | ✅ Working |
-| Device info | Info | ✅ Working |
-| ANC control (high / mid / low / adaptive / off) | Audio | ✅ Working |
-| Transparency mode | Audio | ✅ Working |
-| Equalizer / Custom EQ | Audio | 🔴 Not implemented yet |
-| Spatial audio | Audio | 🔴 Not implemented yet |
-| Enhanced bass | Audio | 🔴 Not implemented yet |
+| Device info (serial, firmware) | Info | ✅ Working |
+| ANC (high / mid / low / adaptive / transparency / off) | Audio | ✅ Working |
+| Equalizer / Custom EQ | Audio | ⚪ Needs further reverse engineering |
+| Spatial audio | Audio | ⚪ Needs further reverse engineering |
+| Enhanced bass | Audio | ⚪ Needs further reverse engineering |
 | Find earbuds (left / right / both / stop) | Utility | ✅ Working |
-| Eartip fit test | Utility | ⚪ Needs reverse engineering |
-| Low latency mode | Utility | 🔴 Not implemented yet |
-| Multipoint / dual connection | Connectivity | 🔴 Not implemented yet |
-| Gesture configuration | Settings | 🔴 Not implemented yet |
-| GUI | Interface | 🔴 Not implemented yet |
-| Windows compatibility | Platform | 🔴 Not implemented yet |
+| Eartip fit test | Utility | ✅ Working |
+| Low latency mode | Utility | 🟡 Protocol known, not exposed yet |
+| Gesture configuration | Settings | 🟡 Protocol known, not exposed yet |
+| Multipoint / dual connection | Connectivity | ⚪ Needs further reverse engineering |
+| GUI | Interface | 🔴 Not started |
 
 | Symbol | Meaning |
 |---|---|
 | ✅ | Implemented and working |
-| 🔴 | Known protocol command, not exposed yet |
-| ⚪ | Planned, but needs further reverse engineering first |
+| 🟡 | Command ID confirmed, not yet exposed in the CLI |
+| ⚪ | Planned, but needs further reverse engineering |
+| 🔴 | Not started |
 
 ## Use of AI
 Majority code has been written manually. AI was used to help write the documentation and commit messages, and for some assistance.

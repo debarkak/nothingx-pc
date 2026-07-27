@@ -1,10 +1,6 @@
 import time
-from typing import Generator
 from ..wire import Cmd, Dir
 from ..responses import Parsers, BatteryStatus
-
-# Unsolicited direction byte seen on battery push packets
-_UNSOLICITED_DIR = 0x00
 
 
 class BatteryCommands:
@@ -15,13 +11,9 @@ class BatteryCommands:
         pkt = self._s.run(Cmd.BATTERY, Dir.GET, b"")
         return Parsers.battery(pkt.payload)
 
-    def watch(self, timeout: float = 60.0) -> Generator[BatteryStatus, None, None]:
-        """Yield BatteryStatus whenever the device pushes a battery update.
-
-        Battery push events happen on lid open/close and contain case battery
-        (tag 0x04) in addition to left (0x02) and right (0x03) earbud levels.
-        Keeps the connection alive for *timeout* seconds listening for events.
-        """
+    def watch(self, timeout=60.0):
+        # listens for unsolicited battery pushes (happens on lid open/close)
+        # case battery shows up in these events too
         deadline = time.time() + timeout
         self._s._conn.sock.settimeout(0.3)
         while time.time() < deadline:

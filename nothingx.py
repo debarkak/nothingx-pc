@@ -17,6 +17,7 @@ commands:
                          high, mid, low, adaptive, transparency, off
   find <side>          ring an earbud to find it
                          left, right, both, stop
+  fit                  run eartip fit test (keep earbuds in ears, takes ~2s)
   watch [--timeout N]  monitor live battery updates (includes case battery)
                          waits for push events (lid open/close) for N seconds
 
@@ -40,6 +41,7 @@ def build_parser():
     sub.add_parser("battery")
     sub.add_parser("firmware")
     sub.add_parser("info")
+    sub.add_parser("fit")
 
     anc = sub.add_parser("anc")
     anc.add_argument("mode", choices=["high", "mid", "low", "adaptive", "transparency", "off"])
@@ -74,6 +76,25 @@ def run(args, ear: Device):
     elif args.cmd == "info":
         print(f"{ear.name}  ({ear.mac})")
         print(f"Firmware: {ear.info.firmware()}")
+
+    elif args.cmd == "fit":
+        print("Running eartip fit test — keep both earbuds in your ears...")
+        try:
+            result = ear.fit.run()
+        except TimeoutError as e:
+            print(f"Error: {e}")
+        else:
+            def _side(code):
+                return {0: "✓ Good seal", 1: "✗ Poor seal", 2: "✗ Not in ear"}.get(code, f"✗ Unknown ({code})")
+            print(f"Left:  {_side(result.left)}")
+            print(f"Right: {_side(result.right)}")
+            if result.left_ok and result.right_ok:
+                print("\033[1mPerfect fit — you're ready!\033[0m")
+            elif result.left == 2 or result.right == 2:
+                print("\033[1mOne or both earbuds not detected — make sure they're in your ears.\033[0m")
+            else:
+                bad = [s for s, c in (("left", result.left), ("right", result.right)) if c != 0]
+                print(f"\033[1mPoor seal on {' and '.join(bad)} side — try adjusting or switching eartip size.\033[0m")
 
     elif args.cmd == "anc":
         m = args.mode
