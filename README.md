@@ -19,7 +19,7 @@ An unofficial implementation of the protocols used by Nothing X for Nothing Ear 
 | Enhanced bass | Audio | ⚪ Needs further reverse engineering |
 | Find earbuds (left / right / both / stop) | Utility | ✅ Working |
 | Eartip fit test | Utility | ✅ Working |
-| Low latency mode (Toggle setting) | Settings | 🟡 Protocol known, not exposed yet |
+| Low lag mode (Toggle setting) | Settings | ✅ Working |
 | Gesture configuration | Settings | 🟡 Protocol known, not exposed yet |
 | Dual connection (Toggle setting) | Settings | ⚪ Needs further reverse engineering |
 | GUI | Interface | 🔴 Not started |

@@ -7,7 +7,7 @@ from nothingx.errors import NothingError
 
 
 HELP = """\
-usage: python3 nothingx.py [--debug] <command> [...]
+usage: nothingx [--debug] <command> [...]
 
 commands:
   battery              left, right, and case (when available) battery levels
@@ -17,9 +17,9 @@ commands:
                          high, mid, low, adaptive, transparency, off
   find <side>          ring an earbud to find it
                          left, right, both, stop
-  fit                  run eartip fit test (keep earbuds in ears, takes ~2s)
-  watch [--timeout N]  monitor live battery updates (includes case battery)
-                         waits for push events (lid open/close) for N seconds
+  fit                  run eartip fit test to check for optimised noise cancellation
+  latency <on|off|get> control low lag mode
+  watch [--timeout N]  monitor live battery updates
 
 options:
   --debug              print raw Bluetooth packets
@@ -49,6 +49,9 @@ def build_parser():
     find = sub.add_parser("find")
     find.add_argument("side", choices=["left", "right", "both", "stop"])
 
+    latency = sub.add_parser("latency")
+    latency.add_argument("action", choices=["on", "off", "get"])
+
     watch = sub.add_parser("watch")
     watch.add_argument("--timeout", type=float, default=60.0,
                        help="seconds to listen for battery push events (default: 60)")
@@ -76,6 +79,17 @@ def run(args, ear: Device):
     elif args.cmd == "info":
         print(f"{ear.name}  ({ear.mac})")
         print(f"Firmware: {ear.info.firmware()}")
+
+    elif args.cmd == "latency":
+        if args.action == "get":
+            state = ear.latency.get()
+            print(f"Low Lag Mode: {'ON' if state else 'OFF'}")
+        elif args.action == "on":
+            ear.latency.set(True)
+            print("Low Lag Mode: ON")
+        elif args.action == "off":
+            ear.latency.set(False)
+            print("Low Lag Mode: OFF")
 
     elif args.cmd == "fit":
         print("Running eartip fit test — keep both earbuds in your ears...\n")
