@@ -13,6 +13,7 @@ commands:
   battery              left, right, and case (when available) battery levels
   firmware             firmware version string
   info                 device name, MAC, and firmware
+  fetch                fetch and display all current device settings
   anc <mode>           set noise control mode
                          high, mid, low, adaptive, transparency, off
   find <side>          ring an earbud to find it
@@ -41,6 +42,7 @@ def build_parser():
     sub.add_parser("battery")
     sub.add_parser("firmware")
     sub.add_parser("info")
+    sub.add_parser("fetch")
     sub.add_parser("fit")
 
     anc = sub.add_parser("anc")
@@ -79,6 +81,19 @@ def run(args, ear: Device):
     elif args.cmd == "info":
         print(f"{ear.name}  ({ear.mac})")
         print(f"Firmware: {ear.info.firmware()}")
+
+    elif args.cmd == "fetch":
+        print(f"Device:   {ear.name} ({ear.mac})")
+        print(f"Firmware: {ear.info.firmware()}")
+        print("---------------------------------")
+        b = ear.battery()
+        
+        l_act = "Yes" if b.left > 0 else "No"
+        r_act = "Yes" if b.right > 0 else "No"
+        print(f"Active:   L: {l_act}  |  R: {r_act}")
+        print(f"Battery:  L {b.left}%  |  R {b.right}%" + (f"  |  Case {b.case}%" if b.case else ""))
+        print(f"ANC Mode: {ear.anc.get().title()}")
+        print(f"Low Lag:  {'ON' if ear.latency.get() else 'OFF'}")
 
     elif args.cmd == "latency":
         if args.action == "get":
