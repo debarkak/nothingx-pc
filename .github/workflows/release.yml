@@ -1,0 +1,88 @@
+name: Weekly Release
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Runs every Sunday at 00:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Binary (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name nothingx-linux-${{ matrix.arch }} nothingx.py
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.arch }}
+          path: dist/nothingx-linux-${{ matrix.arch }}
+
+  weekly-release:
+    name: Create Weekly Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bin/
+
+      - name: Organize release binaries
+        run: |
+          mkdir -p dist
+          cp bin/binary-x86_64/nothingx-linux-x86_64 dist/nothingx-linux-x86_64
+          cp bin/binary-arm64/nothingx-linux-arm64 dist/nothingx-linux-arm64
+          chmod +x dist/*
+
+      - name: Generate Tag and Date
+        id: vars
+        run: |
+          DATE=$(date +'%Y.%m.%d')
+          echo "tag=weekly-${DATE}" >> $GITHUB_OUTPUT
+          echo "date=${DATE}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: Weekly Build - ${{ steps.vars.outputs.date }}
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+          files: |
+            dist/nothingx-linux-x86_64
+            dist/nothingx-linux-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

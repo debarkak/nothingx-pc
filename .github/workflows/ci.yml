@@ -1,0 +1,45 @@
+name: CI Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build Binary (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name nothingx-linux-${{ matrix.arch }} nothingx.py
+
+      - name: Test binary execution
+        run: |
+          ./dist/nothingx-linux-${{ matrix.arch }} --help
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nothingx-linux-${{ matrix.arch }}
+          path: dist/nothingx-linux-${{ matrix.arch }}
