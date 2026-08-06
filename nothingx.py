@@ -7,9 +7,11 @@ from nothingx.errors import NothingError
 
 
 HELP = """\
-usage: nothingx [--debug] <command> [...]
+usage: nothingx [--debug] [-d DEVICE] <command> [...]
 
 commands:
+  select               interactively select active Nothing device
+  devices              list all paired Nothing devices
   battery              left, right, and case (when available) battery levels
   firmware             firmware version string
   info                 device name, MAC, and firmware
@@ -23,6 +25,7 @@ commands:
   watch [--timeout N]  monitor live battery updates
 
 options:
+  -d, --device NAME    target specific paired device (name or MAC)
   --debug              print raw Bluetooth packets
   -h, --help           show this message and exit\
 """
@@ -36,9 +39,12 @@ def build_parser():
         add_help=False,
     )
     p.add_argument("-h", "--help", action="store_true")
+    p.add_argument("-d", "--device", type=str, help="target specific paired device")
     p.add_argument("--debug", action="store_true")
     sub = p.add_subparsers(dest="cmd")
 
+    sub.add_parser("select")
+    sub.add_parser("devices")
     sub.add_parser("battery")
     sub.add_parser("firmware")
     sub.add_parser("info")
@@ -214,6 +220,123 @@ def run(args, ear: Device):
             pass
 
 
+def list_devices():
+    from nothingx.scanner import Scanner
+    devs = Scanner.find_all_nothing()
+    if not devs:
+        print("error: no paired Nothing / Ear / CMF devices found.", file=sys.stderr)
+        sys.exit(1)
+    selected = Scanner.get_selected()
+    selected_mac = selected["mac"] if selected else None
+
+    print("Paired Nothing Devices:")
+    for d in devs:
+        active_mark = "  \033[32m[active]\033[0m" if d["mac"] == selected_mac else ""
+        print(f"  • {d['name']} ({d['mac']}){active_mark}")
+
+
+def select_device_interactive():
+    from nothingx.scanner import Scanner
+    devs = Scanner.find_all_nothing()
+    if not devs:
+        print("error: no paired Nothing / Ear / CMF devices found.", file=sys.stderr)
+        sys.exit(1)
+
+    selected = Scanner.get_selected()
+    selected_mac = selected["mac"] if selected else None
+
+    if len(devs) == 1:
+        d = devs[0]
+        Scanner.set_selected(d)
+        print(f"✓ Default device set to: {d['name']} ({d['mac']})")
+        return
+
+    current_idx = 0
+    if selected_mac:
+        for idx, d in enumerate(devs):
+            if d["mac"] == selected_mac:
+                current_idx = idx
+                break
+
+    if not sys.stdin.isatty():
+        print("Paired Nothing Devices:\n")
+        for i, d in enumerate(devs, 1):
+            act = " [active]" if d["mac"] == selected_mac else ""
+            print(f"  {i}) {d['name']} ({d['mac']}){act}")
+        try:
+            choice = input(f"\nSelect device (1-{len(devs)}): ").strip()
+            idx = int(choice) - 1
+            if 0 <= idx < len(devs):
+                chosen = devs[idx]
+                Scanner.set_selected(chosen)
+                print(f"✓ Selected device: {chosen['name']} ({chosen['mac']})")
+            else:
+                print("Invalid selection.")
+        except Exception:
+            print("Selection cancelled.")
+        return
+
+    import termios
+    import tty
+
+    def render(idx):
+        sys.stdout.write("\033[H\033[J")
+        sys.stdout.write("\033[1mSelect Active Nothing Device:\033[0m\n\n")
+        for i, d in enumerate(devs):
+            is_active = (d["mac"] == selected_mac)
+            active_label = " \033[90m(active)\033[0m" if is_active else ""
+            if i == idx:
+                sys.stdout.write(f"  \033[36m❯ {i + 1}) {d['name']} ({d['mac']})\033[0m{active_label}\n")
+            else:
+                sys.stdout.write(f"    {i + 1}) {d['name']} ({d['mac']}){active_label}\n")
+        sys.stdout.write("\n\033[90mUse ↑/↓ or 1-9 to navigate, Enter to select, q to cancel\033[0m\n")
+        sys.stdout.flush()
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    chosen = None
+    try:
+        tty.setraw(fd)
+        sys.stdout.write("\033[?25l")
+        sys.stdout.flush()
+        
+        while True:
+            render(current_idx)
+            ch = sys.stdin.read(1)
+            if ch in ('\r', '\n'):
+                chosen = devs[current_idx]
+                break
+            elif ch in ('q', 'Q', '\x03'):
+                break
+            elif ch.isdigit():
+                num = int(ch)
+                if 1 <= num <= len(devs):
+                    current_idx = num - 1
+            elif ch == '\x1b':
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    if ch3 == 'A':
+                        current_idx = (current_idx - 1) % len(devs)
+                    elif ch3 == 'B':
+                        current_idx = (current_idx + 1) % len(devs)
+            elif ch in ('k', 'K'):
+                current_idx = (current_idx - 1) % len(devs)
+            elif ch in ('j', 'J'):
+                current_idx = (current_idx + 1) % len(devs)
+    finally:
+        sys.stdout.write("\033[?25h")
+        sys.stdout.flush()
+        termios.tcsetattr(fd, termios.TCSANOW, old_settings)
+
+    sys.stdout.write("\033[H\033[J")
+    if chosen:
+        Scanner.set_selected(chosen)
+        print(f"\033[32m✓ Active device set to:\033[0m \033[1m{chosen['name']}\033[0m ({chosen['mac']})")
+    else:
+        print("Selection cancelled.")
+
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -222,11 +345,19 @@ def main():
         print(HELP)
         sys.exit(0)
 
+    if args.cmd == "select":
+        select_device_interactive()
+        sys.exit(0)
+
+    if args.cmd == "devices":
+        list_devices()
+        sys.exit(0)
+
     level = logging.DEBUG if args.debug else logging.WARNING
     logging.basicConfig(level=level, format="%(name)s: %(message)s")
 
     try:
-        ear = Device.discover()
+        ear = Device.discover(target=args.device)
     except NothingError as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(1)

@@ -13,6 +13,9 @@ log = logging.getLogger(__name__)
 _CACHE_DIR = os.path.expanduser("~/.cache/nothingx")
 
 
+_SELECTED_FILE = os.path.join(_CACHE_DIR, "selected.json")
+
+
 class Scanner:
     @staticmethod
     def _run(cmd: str) -> str:
@@ -34,17 +37,51 @@ class Scanner:
         return devs
 
     @classmethod
-    def find_nothing(cls) -> Optional[dict]:
+    def find_all_nothing(cls) -> list:
+        devs = []
         for dev in cls.paired_devices():
             n = dev["name"].lower()
             if "nothing" in n or "ear" in n or "cmf" in n:
-                return dev
+                devs.append(dev)
+        return devs
+
+    @classmethod
+    def get_selected(cls) -> Optional[dict]:
+        if os.path.exists(_SELECTED_FILE):
+            try:
+                with open(_SELECTED_FILE) as f:
+                    return json.load(f)
+            except Exception:
+                pass
         return None
+
+    @classmethod
+    def set_selected(cls, dev: dict):
+        os.makedirs(_CACHE_DIR, exist_ok=True)
+        try:
+            with open(_SELECTED_FILE, "w") as f:
+                json.dump(dev, f)
+        except Exception:
+            pass
+
+    @classmethod
+    def find_nothing(cls) -> Optional[dict]:
+        all_devs = cls.find_all_nothing()
+        if not all_devs:
+            return None
+
+        selected = cls.get_selected()
+        if selected:
+            for dev in all_devs:
+                if dev["mac"] == selected["mac"]:
+                    return dev
+
+        return all_devs[0]
 
     @classmethod
     def find_by_name(cls, query: str) -> Optional[dict]:
         for dev in cls.paired_devices():
-            if query.lower() in dev["name"].lower():
+            if query.lower() in dev["name"].lower() or query.lower() == dev["mac"].lower():
                 return dev
         return None
 

@@ -33,10 +33,15 @@ class Device:
         self.disconnect()
 
     @classmethod
-    def discover(cls) -> "Device":
-        found = Scanner.find_nothing()
-        if not found:
-            raise DeviceNotFoundError("no Nothing device found in paired devices")
+    def discover(cls, target: Optional[str] = None) -> "Device":
+        if target:
+            found = Scanner.find_by_name(target)
+            if not found:
+                raise DeviceNotFoundError(f"no paired device matching '{target}'")
+        else:
+            found = Scanner.find_nothing()
+            if not found:
+                raise DeviceNotFoundError("no Nothing device found in paired devices")
         d = cls(found["mac"], found["name"])
         d.connect()
         return d
