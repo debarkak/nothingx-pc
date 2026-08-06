@@ -22,6 +22,7 @@ commands:
                          left, right, both, stop
   fit                  run eartip fit test to check for optimised noise cancellation
   latency <on|off|get> control low lag mode
+  bass <on|off|get> [N] control enhanced bass (level 1-5)
   watch [--timeout N]  monitor live battery updates
 
 options:
@@ -59,6 +60,10 @@ def build_parser():
 
     latency = sub.add_parser("latency")
     latency.add_argument("action", choices=["on", "off", "get"])
+
+    bass = sub.add_parser("bass")
+    bass.add_argument("action", choices=["on", "off", "get"])
+    bass.add_argument("level", type=int, nargs="?", default=None, help="bass level (1-5)")
 
     watch = sub.add_parser("watch")
     watch.add_argument("--timeout", type=float, default=60.0,
@@ -100,6 +105,9 @@ def run(args, ear: Device):
         print(f"Battery:  L {b.left}%  |  R {b.right}%" + (f"  |  Case {b.case}%" if b.case else ""))
         print(f"ANC Mode: {ear.anc.get().title()}")
         print(f"Low Lag:  {'ON' if ear.latency.get() else 'OFF'}")
+        b_info = ear.bass.get()
+        b_st = f"ON (Level {b_info['level']})" if b_info['enabled'] else "OFF"
+        print(f"Bass:     {b_st}")
 
     elif args.cmd == "latency":
         if args.action == "get":
@@ -111,6 +119,25 @@ def run(args, ear: Device):
         elif args.action == "off":
             ear.latency.set(False)
             print("Low Lag Mode: OFF")
+
+    elif args.cmd == "bass":
+        if args.action == "get":
+            b_info = ear.bass.get()
+            if b_info["enabled"]:
+                print(f"Enhanced Bass: ON (Level: {b_info['level']})")
+            else:
+                print("Enhanced Bass: OFF")
+        elif args.action == "on":
+            lvl = args.level if args.level is not None else 5
+            if lvl == 0:
+                ear.bass.off()
+                print("Enhanced Bass: OFF")
+            else:
+                ear.bass.on(lvl)
+                print(f"Enhanced Bass: ON (Level: {lvl})")
+        elif args.action == "off":
+            ear.bass.off()
+            print("Enhanced Bass: OFF")
 
     elif args.cmd == "fit":
         print("Running eartip fit test — keep both earbuds in your ears...\n")

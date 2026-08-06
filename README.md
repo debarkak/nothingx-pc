@@ -16,7 +16,7 @@ An unofficial implementation of the protocols used by Nothing X for Nothing Ear 
 | ANC (high / mid / low / adaptive / transparency / off) | Audio | ✅ Working |
 | Equalizer / Custom EQ | Audio | ⚪ Needs further reverse engineering |
 | Spatial audio (Toggle setting) | Audio | ⚪ Needs further reverse engineering |
-| Enhanced bass | Audio | ⚪ Needs further reverse engineering |
+| Enhanced bass | Audio | ✅ Working |
 | Find earbuds (left / right / both / stop) | Utility | ✅ Working |
 | Eartip fit test | Utility | ✅ Working |
 | Low lag mode (Toggle setting) | Settings | ✅ Working |
