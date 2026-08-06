@@ -73,11 +73,29 @@ jobs:
           echo "tag=weekly-${DATE}" >> $GITHUB_OUTPUT
           echo "date=${DATE}" >> $GITHUB_OUTPUT
 
+      - name: Generate Custom Release Notes
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | head -n 1)
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..HEAD"
+          else
+            RANGE="--since=7.days"
+          fi
+
+          echo "### changes:" > release_notes.md
+          echo "" >> release_notes.md
+          git log $RANGE --no-merges --pretty=format:"- %s ([%h](https://github.com/${{ github.repository }}/commit/%H))" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "---" >> release_notes.md
+          echo "### full changelog" >> release_notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: Weekly Build - ${{ steps.vars.outputs.date }}
+          body_path: release_notes.md
           generate_release_notes: true
           draft: false
           prerelease: true
