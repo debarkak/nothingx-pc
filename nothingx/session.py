@@ -48,7 +48,7 @@ class _StreamParser:
                 del self._buf[0]
                 continue
 
-            plen  = self._buf[5]
+            plen  = self._buf[5] | (self._buf[6] << 8)
             total = 8 + plen + (2 if standard else 0)
 
             if len(self._buf) < total:
@@ -58,9 +58,10 @@ class _StreamParser:
 
             if standard:
                 got  = bytes(raw[-2:])
-                want = crc16(bytes(raw[:-2]))
-                if got != want:
-                    log.warning(f"CRC mismatch: got {got.hex()} want {want.hex()}")
+                want_full = crc16(bytes(raw[:-2]))
+                want_payload = crc16(bytes(raw[8:-2]))
+                if got not in (want_full, want_payload):
+                    log.warning(f"CRC mismatch: got {got.hex()} want {want_full.hex()} or {want_payload.hex()}")
                     del self._buf[0]
                     continue
 
