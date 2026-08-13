@@ -10,15 +10,8 @@ permissions:
 
 jobs:
   build:
-    name: Build Binary (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            arch: x86_64
-          - runner: ubuntu-24.04-arm
-            arch: arm64
+    name: Build Universal Binaries
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -32,17 +25,27 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller
+          pip install pyinstaller customtkinter
 
-      - name: Build executable
+      - name: Build executable (CLI)
         run: |
-          pyinstaller --onefile --name nothingx-linux-${{ matrix.arch }} nothingx.py
+          pyinstaller --onefile --name nothingx-cli-universal nothingx.py
 
-      - name: Upload binary artifact
+      - name: Build executable (GUI)
+        run: |
+          pyinstaller --onefile --name nothingx-gui-universal nothingx_gui.py
+
+      - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: binary-${{ matrix.arch }}
-          path: dist/nothingx-linux-${{ matrix.arch }}
+          name: binary-cli
+          path: dist/nothingx-cli-universal
+
+      - name: Upload GUI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-gui
+          path: dist/nothingx-gui-universal
 
   weekly-release:
     name: Create Weekly Release
@@ -62,8 +65,8 @@ jobs:
       - name: Organize release binaries
         run: |
           mkdir -p dist
-          cp bin/binary-x86_64/nothingx-linux-x86_64 dist/nothingx-linux-x86_64
-          cp bin/binary-arm64/nothingx-linux-arm64 dist/nothingx-linux-arm64
+          cp bin/binary-cli/nothingx-cli-universal dist/nothingx-cli-universal
+          cp bin/binary-gui/nothingx-gui-universal dist/nothingx-gui-universal
           chmod +x dist/*
 
       - name: Generate Tag and Date
@@ -103,7 +106,7 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            dist/nothingx-linux-x86_64
-            dist/nothingx-linux-arm64
+            dist/nothingx-cli-universal
+            dist/nothingx-gui-universal
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
