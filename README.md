@@ -1,6 +1,6 @@
 # Nothing X PC (Unofficial)
 
-An unofficial implementation of the protocols used by Nothing X for Nothing Ear and CMF Buds devices.
+An unofficial implementation of the protocols used by Nothing X for Nothing audio products.
 
 (... more coming soon.)
 
