@@ -4,7 +4,6 @@ import threading
 import time
 import traceback
 from nothingx.device import Device, DeviceNotFoundError
-from nothingx.scanner import Scanner
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
@@ -16,7 +15,6 @@ class NothingXGUI(ctk.CTk):
         self.geometry("500x750")
         self.resizable(False, False)
         
-        # Make the UI look like the Nothing app (black backgrounds, rounded cards)
         self.configure(fg_color="#000000")
 
         self.ear = None
@@ -25,7 +23,6 @@ class NothingXGUI(ctk.CTk):
 
         self.build_ui()
         
-        # Start connection thread
         threading.Thread(target=self.connect_and_poll, daemon=True).start()
 
     def build_ui(self):
@@ -61,12 +58,15 @@ class NothingXGUI(ctk.CTk):
         ctk.CTkLabel(self.anc_frame, text="Noise Control", font=("Arial", 16, "bold")).pack(pady=(15,5), padx=15, anchor="w")
         
         self.anc_var = ctk.StringVar(value="off")
-        self.anc_seg = ctk.CTkSegmentedButton(self.anc_frame, 
+        # Use an OptionMenu instead of segmented button to avoid layout truncation
+        self.anc_dropdown = ctk.CTkOptionMenu(self.anc_frame, 
                                               values=["high", "mid", "low", "adaptive", "transparency", "off"],
                                               variable=self.anc_var,
                                               command=self.on_anc_change,
-                                              state="disabled")
-        self.anc_seg.pack(pady=(0, 15), padx=15, fill="x")
+                                              state="disabled",
+                                              dynamic_resizing=False,
+                                              width=200)
+        self.anc_dropdown.pack(pady=(0, 15), padx=15, anchor="w")
 
         # Toggles Section (In-Ear, Low Lag)
         self.toggles_frame = ctk.CTkFrame(self, corner_radius=15, fg_color="#1c1c1e")
@@ -109,17 +109,18 @@ class NothingXGUI(ctk.CTk):
         find_btn_frame = ctk.CTkFrame(self.find_frame, fg_color="transparent")
         find_btn_frame.pack(pady=(0,15), padx=15, fill="x")
         
-        self.btn_find_l = ctk.CTkButton(find_btn_frame, text="Left", width=80, command=lambda: self.on_find("left"), state="disabled")
-        self.btn_find_l.pack(side="left", padx=5)
+        self.btn_find_l = ctk.CTkButton(find_btn_frame, text="Left", command=lambda: self.on_find("left"), state="disabled")
+        self.btn_find_l.pack(side="left", padx=5, expand=True, fill="x")
         
-        self.btn_find_r = ctk.CTkButton(find_btn_frame, text="Right", width=80, command=lambda: self.on_find("right"), state="disabled")
-        self.btn_find_r.pack(side="left", padx=5)
+        self.btn_find_r = ctk.CTkButton(find_btn_frame, text="Right", command=lambda: self.on_find("right"), state="disabled")
+        self.btn_find_r.pack(side="left", padx=5, expand=True, fill="x")
         
-        self.btn_find_stop = ctk.CTkButton(find_btn_frame, text="Stop", width=80, fg_color="#b22222", hover_color="#8b0000", command=lambda: self.on_find("stop"), state="disabled")
-        self.btn_find_stop.pack(side="right", padx=5)
+        self.btn_find_stop = ctk.CTkButton(find_btn_frame, text="Stop", fg_color="#b22222", hover_color="#8b0000", command=lambda: self.on_find("stop"), state="disabled")
+        self.btn_find_stop.pack(side="right", padx=5, expand=True, fill="x")
 
-    def enable_ui(self):
-        self.anc_seg.configure(state="normal")
+    def _ui_update_connected(self, dev_name):
+        self.dev_name_lbl.configure(text=dev_name)
+        self.anc_dropdown.configure(state="normal")
         self.inear_switch.configure(state="normal")
         self.lag_switch.configure(state="normal")
         self.bass_switch.configure(state="normal")
@@ -128,19 +129,28 @@ class NothingXGUI(ctk.CTk):
         self.btn_find_r.configure(state="normal")
         self.btn_find_stop.configure(state="normal")
 
+    def _ui_update_disconnected(self):
+        self.dev_name_lbl.configure(text="Disconnected")
+        self.anc_dropdown.configure(state="disabled")
+        self.inear_switch.configure(state="disabled")
+        self.lag_switch.configure(state="disabled")
+        self.bass_switch.configure(state="disabled")
+        self.bass_slider.configure(state="disabled")
+        self.btn_find_l.configure(state="disabled")
+        self.btn_find_r.configure(state="disabled")
+        self.btn_find_stop.configure(state="disabled")
+
     def connect_and_poll(self):
         try:
             self.ear = Device.discover()
-            self.dev_name_lbl.configure(text=f"{self.ear.name}")
-            self.enable_ui()
+            self.after(0, self._ui_update_connected, self.ear.name)
             
             while True:
                 self.fetch_state()
                 time.sleep(5)
         except Exception as e:
-            self.dev_name_lbl.configure(text=f"Disconnected")
+            self.after(0, self._ui_update_disconnected)
             print(f"Connection error: {e}")
-            traceback.print_exc()
 
     def fetch_state(self):
         if not self.ear or self.fetching:
@@ -149,40 +159,54 @@ class NothingXGUI(ctk.CTk):
         self.fetching = True
         try:
             with self.device_lock:
-                # Fetch Battery
+                # Fetch data synchronously in this background thread
                 b = self.ear.battery()
                 l_str = f"L\n{b.left}%" if b.left > 0 else "L\n--%"
                 r_str = f"R\n{b.right}%" if b.right > 0 else "R\n--%"
                 c_str = f"Case\n{b.case}%" if b.case else "Case\n--%"
                 
-                self.l_bat_lbl.configure(text=l_str)
-                self.r_bat_lbl.configure(text=r_str)
-                self.c_bat_lbl.configure(text=c_str)
-                
-                # Fetch ANC
                 anc_mode = self.ear.anc.get()
-                if anc_mode != "unknown":
-                    self.anc_var.set(anc_mode)
-
-                # Fetch In-Ear
-                self.inear_var.set(self.ear.inear.get())
-
-                # Fetch Latency
-                self.lag_var.set(self.ear.latency.get())
-
-                # Fetch Bass
+                inear_state = self.ear.inear.get()
+                latency_state = self.ear.latency.get()
                 bass_info = self.ear.bass.get()
-                self.bass_var.set(bass_info["enabled"])
-                if bass_info["enabled"]:
-                    self.bass_slider.set(bass_info["level"])
-                    self.bass_lvl_lbl.configure(text=f"Level: {bass_info['level']}")
-                else:
-                    self.bass_lvl_lbl.configure(text=f"Level: --")
+
+            # Prepare UI update package
+            state = {
+                "l_bat": l_str,
+                "r_bat": r_str,
+                "c_bat": c_str,
+                "anc": anc_mode,
+                "inear": inear_state,
+                "latency": latency_state,
+                "bass": bass_info
+            }
+            # Schedule UI update on main thread
+            self.after(0, self.update_ui_state, state)
                     
         except Exception as e:
             print(f"Error fetching state: {e}")
         finally:
             self.fetching = False
+
+    def update_ui_state(self, state):
+        # Update Battery labels
+        self.l_bat_lbl.configure(text=state["l_bat"])
+        self.r_bat_lbl.configure(text=state["r_bat"])
+        self.c_bat_lbl.configure(text=state["c_bat"])
+        
+        # Update variables
+        if state["anc"] != "unknown":
+            self.anc_var.set(state["anc"])
+        
+        self.inear_var.set(state["inear"])
+        self.lag_var.set(state["latency"])
+        
+        self.bass_var.set(state["bass"]["enabled"])
+        if state["bass"]["enabled"]:
+            self.bass_slider.set(state["bass"]["level"])
+            self.bass_lvl_lbl.configure(text=f"Level: {state['bass']['level']}")
+        else:
+            self.bass_lvl_lbl.configure(text=f"Level: --")
 
     def on_anc_change(self, value):
         def _run():
