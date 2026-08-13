@@ -12,7 +12,14 @@ class AncCommands:
         pkt = self._s.run(Cmd.ANC_GET, Dir.GET, b"")
         if not pkt or len(pkt.payload) < 2:
             return "unknown"
-        m = pkt.payload[1]
+        p = pkt.payload
+        if p[0] == 0x01:
+            m = p[1]
+        elif len(p) >= 5 and p[3] == 0x01:
+            m = p[4]
+        else:
+            m = p[1]
+
         for name, value in AncMode.__members__.items():
             if value == m:
                 return name.lower()
