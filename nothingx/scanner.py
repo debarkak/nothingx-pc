@@ -18,9 +18,9 @@ _SELECTED_FILE = os.path.join(_CACHE_DIR, "selected.json")
 
 class Scanner:
     @staticmethod
-    def _run(cmd: str) -> str:
+    def _run(*args) -> str:
         try:
-            r = subprocess.run(["bluetoothctl", cmd], capture_output=True, text=True, timeout=2)
+            r = subprocess.run(["bluetoothctl", *args], capture_output=True, text=True, timeout=2)
             return r.stdout
         except Exception as e:
             log.debug(f"bluetoothctl failed: {e}")
@@ -37,9 +37,33 @@ class Scanner:
         return devs
 
     @classmethod
+    def connected_devices(cls) -> list:
+        out = cls._run("devices", "Connected")
+        devs = []
+        for line in out.splitlines():
+            parts = line.split(" ", 2)
+            if len(parts) == 3 and parts[0] == "Device":
+                devs.append({"mac": parts[1], "name": parts[2]})
+        return devs
+
+    @classmethod
+    def is_connected(cls, mac: str) -> bool:
+        out = cls._run("info", mac)
+        return "Connected: yes" in out
+
+    @classmethod
     def find_all_nothing(cls) -> list:
         devs = []
         for dev in cls.paired_devices():
+            n = dev["name"].lower()
+            if "nothing" in n or "ear" in n or "cmf" in n:
+                devs.append(dev)
+        return devs
+
+    @classmethod
+    def find_connected_nothing(cls) -> list:
+        devs = []
+        for dev in cls.connected_devices():
             n = dev["name"].lower()
             if "nothing" in n or "ear" in n or "cmf" in n:
                 devs.append(dev)
@@ -70,6 +94,21 @@ class Scanner:
         if not all_devs:
             return None
 
+        # Automatically check which Nothing audio device is actually connected via Bluetooth
+        connected_nothing = cls.find_connected_nothing()
+        if len(connected_nothing) == 1:
+            cls.set_selected(connected_nothing[0])
+            return connected_nothing[0]
+        elif len(connected_nothing) > 1:
+            selected = cls.get_selected()
+            if selected:
+                for dev in connected_nothing:
+                    if dev["mac"] == selected["mac"]:
+                        return dev
+            cls.set_selected(connected_nothing[0])
+            return connected_nothing[0]
+
+        # Fallback if no device is currently reporting Connected state
         selected = cls.get_selected()
         if selected:
             for dev in all_devs:

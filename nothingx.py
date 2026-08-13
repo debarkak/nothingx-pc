@@ -253,13 +253,21 @@ def list_devices():
     if not devs:
         print("error: no paired Nothing / Ear / CMF devices found.", file=sys.stderr)
         sys.exit(1)
-    selected = Scanner.get_selected()
-    selected_mac = selected["mac"] if selected else None
+
+    active_dev = Scanner.find_nothing()
+    active_mac = active_dev["mac"] if active_dev else None
+    connected_macs = {d["mac"] for d in Scanner.find_connected_nothing()}
 
     print("Paired Nothing Devices:")
     for d in devs:
-        active_mark = "  \033[32m[active]\033[0m" if d["mac"] == selected_mac else ""
-        print(f"  • {d['name']} ({d['mac']}){active_mark}")
+        status_tags = []
+        if d["mac"] in connected_macs:
+            status_tags.append("\033[36mconnected\033[0m")
+        if d["mac"] == active_mac:
+            status_tags.append("\033[32mactive\033[0m")
+
+        tag_str = f"  [{', '.join(status_tags)}]" if status_tags else ""
+        print(f"  • {d['name']} ({d['mac']}){tag_str}")
 
 
 def select_device_interactive():
@@ -269,8 +277,9 @@ def select_device_interactive():
         print("error: no paired Nothing / Ear / CMF devices found.", file=sys.stderr)
         sys.exit(1)
 
-    selected = Scanner.get_selected()
-    selected_mac = selected["mac"] if selected else None
+    active_dev = Scanner.find_nothing()
+    active_mac = active_dev["mac"] if active_dev else None
+    connected_macs = {d["mac"] for d in Scanner.find_connected_nothing()}
 
     if len(devs) == 1:
         d = devs[0]
@@ -279,17 +288,20 @@ def select_device_interactive():
         return
 
     current_idx = 0
-    if selected_mac:
+    if active_mac:
         for idx, d in enumerate(devs):
-            if d["mac"] == selected_mac:
+            if d["mac"] == active_mac:
                 current_idx = idx
                 break
 
     if not sys.stdin.isatty():
         print("Paired Nothing Devices:\n")
         for i, d in enumerate(devs, 1):
-            act = " [active]" if d["mac"] == selected_mac else ""
-            print(f"  {i}) {d['name']} ({d['mac']}){act}")
+            tags = []
+            if d["mac"] in connected_macs: tags.append("connected")
+            if d["mac"] == active_mac: tags.append("active")
+            tag_str = f" [{', '.join(tags)}]" if tags else ""
+            print(f"  {i}) {d['name']} ({d['mac']}){tag_str}")
         try:
             choice = input(f"\nSelect device (1-{len(devs)}): ").strip()
             idx = int(choice) - 1
@@ -310,8 +322,12 @@ def select_device_interactive():
         sys.stdout.write("\033[H\033[J")
         sys.stdout.write("\033[1mSelect Active Nothing Device:\033[0m\n\n")
         for i, d in enumerate(devs):
-            is_active = (d["mac"] == selected_mac)
-            active_label = " \033[90m(active)\033[0m" if is_active else ""
+            tags = []
+            if d["mac"] in connected_macs:
+                tags.append("\033[36mconnected\033[0m")
+            if d["mac"] == active_mac:
+                tags.append("\033[32mactive\033[0m")
+            active_label = f" ({', '.join(tags)})" if tags else ""
             if i == idx:
                 sys.stdout.write(f"  \033[36m❯ {i + 1}) {d['name']} ({d['mac']})\033[0m{active_label}\n")
             else:
