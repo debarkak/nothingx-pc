@@ -10,7 +10,7 @@ An unofficial implementation of the protocols used by Nothing X for Nothing audi
 |---|---|---|
 | Battery levels (left / right / case) | Monitoring | ✅ Working |
 | Battery push events (live updates) | Monitoring | ✅ Working |
-| In-ear detection (Toggle setting) | Settings | 🟡 Protocol known, not exposed yet |
+| In-ear detection (Toggle setting) | Settings | ✅ Working |
 | Firmware version | Info | ✅ Working |
 | Device info (serial, firmware) | Info | ✅ Working |
 | ANC (high / mid / low / adaptive / transparency / off) | Audio | ✅ Working |

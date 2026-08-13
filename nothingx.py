@@ -23,6 +23,7 @@ commands:
   fit                  run eartip fit test to check for optimised noise cancellation
   latency <on|off|get> control low lag mode
   bass <on|off|get> [N] control enhanced bass (level 1-5)
+  inear <on|off|get>   control in-ear detection
   watch [--timeout N]  monitor live battery updates
 
 options:
@@ -64,6 +65,9 @@ def build_parser():
     bass = sub.add_parser("bass")
     bass.add_argument("action", choices=["on", "off", "get"])
     bass.add_argument("level", type=int, nargs="?", default=None, help="bass level (1-5)")
+
+    inear = sub.add_parser("inear")
+    inear.add_argument("action", choices=["on", "off", "get"])
 
     watch = sub.add_parser("watch")
     watch.add_argument("--timeout", type=float, default=60.0,
@@ -108,6 +112,7 @@ def run(args, ear: Device):
         b_info = ear.bass.get()
         b_st = f"ON (Level {b_info['level']})" if b_info['enabled'] else "OFF"
         print(f"Bass:     {b_st}")
+        print(f"In-Ear:   {'ON' if ear.inear.get() else 'OFF'}")
 
     elif args.cmd == "latency":
         if args.action == "get":
@@ -138,6 +143,17 @@ def run(args, ear: Device):
         elif args.action == "off":
             ear.bass.off()
             print("Enhanced Bass: OFF")
+
+    elif args.cmd == "inear":
+        if args.action == "get":
+            state = ear.inear.get()
+            print(f"In-Ear Detection: {'ON' if state else 'OFF'}")
+        elif args.action == "on":
+            ear.inear.on()
+            print("In-Ear Detection: ON")
+        elif args.action == "off":
+            ear.inear.off()
+            print("In-Ear Detection: OFF")
 
     elif args.cmd == "fit":
         print("Running eartip fit test — keep both earbuds in your ears...\n")

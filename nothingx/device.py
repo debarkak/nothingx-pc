@@ -1,7 +1,7 @@
 from typing import Optional
 from .scanner import Scanner, RFCOMMConnection
 from .session import Session
-from .commands import AncCommands, BatteryCommands, BassCommands, FindCommands, FitCommands, InfoCommands, LatencyCommands
+from .commands import AncCommands, BatteryCommands, BassCommands, FindCommands, FitCommands, InEarCommands, InfoCommands, LatencyCommands
 from .errors import DeviceNotFoundError
 
 
@@ -17,6 +17,7 @@ class Device:
         self.bass    = BassCommands(self._session)
         self.find    = FindCommands(self._session)
         self.fit     = FitCommands(self._session)
+        self.inear   = InEarCommands(self._session)
         self.info    = InfoCommands(self._session)
         self.latency = LatencyCommands(self._session)
 
