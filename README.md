@@ -22,7 +22,7 @@ An unofficial implementation of the protocols used by Nothing X for Nothing audi
 | Low lag mode (Toggle setting) | Settings | ✅ Working |
 | Gesture configuration | Settings | 🟡 Protocol known, not exposed yet |
 | Dual connection (Toggle setting) | Settings | ⚪ Needs further reverse engineering |
-| GUI | Interface | 🔴 Not started |
+| GUI | Interface | ✅ Working |
 
 | Symbol | Meaning |
 |---|---|
@@ -32,7 +32,7 @@ An unofficial implementation of the protocols used by Nothing X for Nothing audi
 | 🔴 | Not started |
 
 ## Use of AI
-Majority code has been written manually. AI was used to help write the documentation and commit messages, and for some assistance.
+Majority code has been written manually. AI was used to help write the documentation, commit messages, and the entire cross-platform GUI.
 
 ## License
 
