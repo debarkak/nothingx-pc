@@ -102,6 +102,6 @@ class Session:
         deadline = time.time() + timeout
         while time.time() < deadline:
             pkt = self.recv(deadline - time.time())
-            if pkt.direction in (Dir.ACK, Dir.RESPONSE):
+            if pkt.cmd == cmd and pkt.direction in (Dir.ACK, Dir.RESPONSE):
                 return pkt
         raise TimeoutError(f"no response to cmd 0x{cmd:02X} in {timeout}s")

@@ -173,15 +173,6 @@ class NothingXGUI(ctk.CTk):
         self.fetching = True
         try:
             with self.device_lock:
-                # Flush the stream slightly to drop old unsolicited packets
-                # A quick empty recv helps avoid stale data
-                try:
-                    self.ear._session._conn.sock.settimeout(0.01)
-                    while self.ear._session._conn.recv(4096):
-                        pass
-                except Exception:
-                    pass
-
                 # Fetch data synchronously in this background thread
                 b = self.ear.battery()
                 l_str = f"L\n{b.left}%" if b.left > 0 else "L\n--%"
