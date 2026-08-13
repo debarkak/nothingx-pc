@@ -20,7 +20,7 @@ class InEarCommands:
     def set(self, enable: bool):
         import time
         val = 0x01 if enable else 0x00
-        payload = bytes([0x01, val, 0x00])
+        payload = bytes([0x02, 0x01, val])
         try:
             self._s.send(Cmd.IN_EAR, Dir.SET, payload)
         except Exception:
