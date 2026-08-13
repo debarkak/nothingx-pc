@@ -3,6 +3,7 @@ import customtkinter as ctk
 import threading
 import time
 import traceback
+import sys
 from nothingx.device import Device, DeviceNotFoundError
 
 ctk.set_appearance_mode("dark")
@@ -20,6 +21,7 @@ class NothingXGUI(ctk.CTk):
         self.ear = None
         self.device_lock = threading.Lock()
         self.fetching = False
+        self.is_cmf = False
 
         self.build_ui()
         
@@ -58,7 +60,6 @@ class NothingXGUI(ctk.CTk):
         ctk.CTkLabel(self.anc_frame, text="Noise Control", font=("Arial", 16, "bold")).pack(pady=(15,5), padx=15, anchor="w")
         
         self.anc_var = ctk.StringVar(value="off")
-        # Use an OptionMenu instead of segmented button to avoid layout truncation
         self.anc_dropdown = ctk.CTkOptionMenu(self.anc_frame, 
                                               values=["high", "mid", "low", "adaptive", "transparency", "off"],
                                               variable=self.anc_var,
@@ -120,6 +121,14 @@ class NothingXGUI(ctk.CTk):
 
     def _ui_update_connected(self, dev_name):
         self.dev_name_lbl.configure(text=dev_name)
+        self.dev_name_lbl.configure(text_color="gray")
+        
+        self.is_cmf = "cmf" in dev_name.lower()
+        if self.is_cmf:
+            self.anc_dropdown.configure(values=["anc", "transparency", "off"])
+        else:
+            self.anc_dropdown.configure(values=["high", "mid", "low", "adaptive", "transparency", "off"])
+            
         self.anc_dropdown.configure(state="normal")
         self.inear_switch.configure(state="normal")
         self.lag_switch.configure(state="normal")
@@ -130,7 +139,7 @@ class NothingXGUI(ctk.CTk):
         self.btn_find_stop.configure(state="normal")
 
     def _ui_update_disconnected(self):
-        self.dev_name_lbl.configure(text="Disconnected")
+        self.dev_name_lbl.configure(text="Disconnected", text_color="#b22222")
         self.anc_dropdown.configure(state="disabled")
         self.inear_switch.configure(state="disabled")
         self.lag_switch.configure(state="disabled")
@@ -140,10 +149,14 @@ class NothingXGUI(ctk.CTk):
         self.btn_find_r.configure(state="disabled")
         self.btn_find_stop.configure(state="disabled")
 
+    def _ui_show_error(self, err_msg):
+        self.dev_name_lbl.configure(text=err_msg, text_color="#b22222")
+
     def connect_and_poll(self):
         try:
             self.ear = Device.discover()
             self.after(0, self._ui_update_connected, self.ear.name)
+            time.sleep(1.5) # Let RFCOMM settle before first fetch
             
             while True:
                 self.fetch_state()
@@ -151,6 +164,7 @@ class NothingXGUI(ctk.CTk):
         except Exception as e:
             self.after(0, self._ui_update_disconnected)
             print(f"Connection error: {e}")
+            sys.stdout.flush()
 
     def fetch_state(self):
         if not self.ear or self.fetching:
@@ -159,6 +173,15 @@ class NothingXGUI(ctk.CTk):
         self.fetching = True
         try:
             with self.device_lock:
+                # Flush the stream slightly to drop old unsolicited packets
+                # A quick empty recv helps avoid stale data
+                try:
+                    self.ear._session._conn.sock.settimeout(0.01)
+                    while self.ear._session._conn.recv(4096):
+                        pass
+                except Exception:
+                    pass
+
                 # Fetch data synchronously in this background thread
                 b = self.ear.battery()
                 l_str = f"L\n{b.left}%" if b.left > 0 else "L\n--%"
@@ -166,6 +189,9 @@ class NothingXGUI(ctk.CTk):
                 c_str = f"Case\n{b.case}%" if b.case else "Case\n--%"
                 
                 anc_mode = self.ear.anc.get()
+                if self.is_cmf and anc_mode == "high":
+                    anc_mode = "anc"
+
                 inear_state = self.ear.inear.get()
                 latency_state = self.ear.latency.get()
                 bass_info = self.ear.bass.get()
@@ -182,9 +208,16 @@ class NothingXGUI(ctk.CTk):
             }
             # Schedule UI update on main thread
             self.after(0, self.update_ui_state, state)
+            self.after(0, lambda: self.dev_name_lbl.configure(text=self.ear.name, text_color="gray"))
                     
         except Exception as e:
+            err = str(e)
+            if "TimeoutError" in repr(e) or "Timeout" in err:
+                self.after(0, self._ui_show_error, "Comm Timeout")
+            else:
+                self.after(0, self._ui_show_error, "Comm Error")
             print(f"Error fetching state: {e}")
+            sys.stdout.flush()
         finally:
             self.fetching = False
 
@@ -212,14 +245,20 @@ class NothingXGUI(ctk.CTk):
         def _run():
             with self.device_lock:
                 try:
-                    if value == "high": self.ear.anc.high()
-                    elif value == "mid": self.ear.anc.mid()
-                    elif value == "low": self.ear.anc.low()
-                    elif value == "adaptive": self.ear.anc.adaptive()
-                    elif value == "transparency": self.ear.anc.transparency()
-                    elif value == "off": self.ear.anc.off()
+                    target = value
+                    if self.is_cmf and value == "anc":
+                        target = "high"
+                    
+                    if target == "high": self.ear.anc.high()
+                    elif target == "mid": self.ear.anc.mid()
+                    elif target == "low": self.ear.anc.low()
+                    elif target == "adaptive": self.ear.anc.adaptive()
+                    elif target == "transparency": self.ear.anc.transparency()
+                    elif target == "off": self.ear.anc.off()
                 except Exception as e:
+                    self.after(0, self._ui_show_error, "Comm Error")
                     print(f"ANC change failed: {e}")
+                    sys.stdout.flush()
             self.fetch_state()
         threading.Thread(target=_run).start()
 
@@ -230,7 +269,9 @@ class NothingXGUI(ctk.CTk):
                 try:
                     self.ear.inear.set(val)
                 except Exception as e:
+                    self.after(0, self._ui_show_error, "Comm Error")
                     print(f"In-ear set failed: {e}")
+                    sys.stdout.flush()
             self.fetch_state()
         threading.Thread(target=_run).start()
 
@@ -241,7 +282,9 @@ class NothingXGUI(ctk.CTk):
                 try:
                     self.ear.latency.set(val)
                 except Exception as e:
+                    self.after(0, self._ui_show_error, "Comm Error")
                     print(f"Lag set failed: {e}")
+                    sys.stdout.flush()
             self.fetch_state()
         threading.Thread(target=_run).start()
 
@@ -256,7 +299,9 @@ class NothingXGUI(ctk.CTk):
                     else:
                         self.ear.bass.off()
                 except Exception as e:
+                    self.after(0, self._ui_show_error, "Comm Error")
                     print(f"Bass toggle failed: {e}")
+                    sys.stdout.flush()
             self.fetch_state()
         threading.Thread(target=_run).start()
 
@@ -270,7 +315,9 @@ class NothingXGUI(ctk.CTk):
                 try:
                     self.ear.bass.on(lvl)
                 except Exception as e:
+                    self.after(0, self._ui_show_error, "Comm Error")
                     print(f"Bass slider failed: {e}")
+                    sys.stdout.flush()
             self.fetch_state()
         threading.Thread(target=_run).start()
 
@@ -282,7 +329,9 @@ class NothingXGUI(ctk.CTk):
                     elif side == "right": self.ear.find.right()
                     elif side == "stop": self.ear.find.stop()
                 except Exception as e:
+                    self.after(0, self._ui_show_error, "Comm Error")
                     print(f"Find {side} failed: {e}")
+                    sys.stdout.flush()
         threading.Thread(target=_run).start()
 
 if __name__ == "__main__":
