@@ -2,6 +2,13 @@
 import sys
 import logging
 import argparse
+
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from nothingx import Device
 from nothingx.errors import NothingError
 
@@ -331,9 +338,6 @@ def select_device_interactive():
             print("Selection cancelled.")
         return
 
-    import termios
-    import tty
-
     def render(idx):
         sys.stdout.write("\033[H\033[J")
         sys.stdout.write("\033[1mSelect Active Nothing Device:\033[0m\n\n")
@@ -351,42 +355,76 @@ def select_device_interactive():
         sys.stdout.write("\n\033[90mUse ↑/↓ or 1-9 to navigate, Enter to select, q to cancel\033[0m\n")
         sys.stdout.flush()
 
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
     chosen = None
-    try:
-        tty.setraw(fd)
-        sys.stdout.write("\033[?25l")
-        sys.stdout.flush()
-        
-        while True:
-            render(current_idx)
-            ch = sys.stdin.read(1)
-            if ch in ('\r', '\n'):
-                chosen = devs[current_idx]
-                break
-            elif ch in ('q', 'Q', '\x03'):
-                break
-            elif ch.isdigit():
-                num = int(ch)
-                if 1 <= num <= len(devs):
-                    current_idx = num - 1
-            elif ch == '\x1b':
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    if ch3 == 'A':
+    if sys.platform == "win32":
+        import msvcrt
+        try:
+            sys.stdout.write("\033[?25l")
+            sys.stdout.flush()
+            while True:
+                render(current_idx)
+                ch = msvcrt.getch()
+                if ch in (b"\r", b"\n"):
+                    chosen = devs[current_idx]
+                    break
+                elif ch in (b"q", b"Q", b"\x03"):
+                    break
+                elif ch.isdigit():
+                    num = int(ch.decode("ascii"))
+                    if 1 <= num <= len(devs):
+                        current_idx = num - 1
+                elif ch in (b"\x00", b"\xe0"):
+                    ch2 = msvcrt.getch()
+                    if ch2 == b"H":
                         current_idx = (current_idx - 1) % len(devs)
-                    elif ch3 == 'B':
+                    elif ch2 == b"P":
                         current_idx = (current_idx + 1) % len(devs)
-            elif ch in ('k', 'K'):
-                current_idx = (current_idx - 1) % len(devs)
-            elif ch in ('j', 'J'):
-                current_idx = (current_idx + 1) % len(devs)
-    finally:
-        sys.stdout.write("\033[?25h")
-        sys.stdout.flush()
-        termios.tcsetattr(fd, termios.TCSANOW, old_settings)
+                elif ch in (b"k", b"K"):
+                    current_idx = (current_idx - 1) % len(devs)
+                elif ch in (b"j", b"J"):
+                    current_idx = (current_idx + 1) % len(devs)
+        finally:
+            sys.stdout.write("\033[?25h")
+            sys.stdout.flush()
+    else:
+        import termios
+        import tty
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            sys.stdout.write("\033[?25l")
+            sys.stdout.flush()
+            
+            while True:
+                render(current_idx)
+                ch = sys.stdin.read(1)
+                if ch in ('\r', '\n'):
+                    chosen = devs[current_idx]
+                    break
+                elif ch in ('q', 'Q', '\x03'):
+                    break
+                elif ch.isdigit():
+                    num = int(ch)
+                    if 1 <= num <= len(devs):
+                        current_idx = num - 1
+                elif ch == '\x1b':
+                    ch2 = sys.stdin.read(1)
+                    if ch2 == '[':
+                        ch3 = sys.stdin.read(1)
+                        if ch3 == 'A':
+                            current_idx = (current_idx - 1) % len(devs)
+                        elif ch3 == 'B':
+                            current_idx = (current_idx + 1) % len(devs)
+                elif ch in ('k', 'K'):
+                    current_idx = (current_idx - 1) % len(devs)
+                elif ch in ('j', 'J'):
+                    current_idx = (current_idx + 1) % len(devs)
+        finally:
+            sys.stdout.write("\033[?25h")
+            sys.stdout.flush()
+            termios.tcsetattr(fd, termios.TCSANOW, old_settings)
 
     sys.stdout.write("\033[H\033[J")
     if chosen:

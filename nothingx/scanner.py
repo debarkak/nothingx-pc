@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import socket
 import logging
@@ -10,8 +11,10 @@ from .wire import build_packet, Cmd, Dir
 
 log = logging.getLogger(__name__)
 
-_CACHE_DIR = os.path.expanduser("~/.cache/nothingx")
-
+if sys.platform == "win32":
+    _CACHE_DIR = os.path.join(os.getenv("LOCALAPPDATA", os.path.expanduser("~")), "nothingx")
+else:
+    _CACHE_DIR = os.path.expanduser("~/.cache/nothingx")
 
 _SELECTED_FILE = os.path.join(_CACHE_DIR, "selected.json")
 
@@ -27,7 +30,79 @@ class Scanner:
             return ""
 
     @classmethod
+    def _paired_devices_windows(cls) -> list:
+        devs = []
+        try:
+            import winreg
+            key_path = r"SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters\Devices"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as k:
+                i = 0
+                while True:
+                    try:
+                        sub = winreg.EnumKey(k, i)
+                        mac = ":".join(sub[j:j+2] for j in range(0, 12, 2)).upper()
+                        name = None
+                        with winreg.OpenKey(k, sub) as sub_k:
+                            for val_name in ("Name", "FriendlyName"):
+                                try:
+                                    raw, _ = winreg.QueryValueEx(sub_k, val_name)
+                                    if isinstance(raw, bytes):
+                                        decoded = raw.decode("utf-8", errors="ignore").rstrip("\x00")
+                                    else:
+                                        decoded = str(raw).rstrip("\x00")
+                                    if decoded.strip():
+                                        name = decoded.strip()
+                                        break
+                                except OSError:
+                                    pass
+                        if name:
+                            devs.append({"mac": mac, "name": name})
+                        i += 1
+                    except OSError:
+                        break
+        except Exception as e:
+            log.debug(f"winreg device query failed: {e}")
+
+        if not devs:
+            try:
+                ps = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command",
+                     "Get-PnpDevice -Class Bluetooth | Where-Object { $_.InstanceId -like '*DEV_*' } | Select-Object FriendlyName, InstanceId | ConvertTo-Json -Compress"],
+                    capture_output=True, text=True, timeout=3
+                )
+                if ps.stdout.strip():
+                    data = json.loads(ps.stdout)
+                    if isinstance(data, dict):
+                        data = [data]
+                    for item in data:
+                        inst = item.get("InstanceId", "")
+                        fname = item.get("FriendlyName", "")
+                        if "DEV_" in inst and fname:
+                            raw_mac = inst.split("DEV_")[1].split("\\")[0].split("&")[0]
+                            if len(raw_mac) == 12:
+                                mac = ":".join(raw_mac[j:j+2] for j in range(0, 12, 2)).upper()
+                                devs.append({"mac": mac, "name": fname})
+            except Exception as e:
+                log.debug(f"powershell fallback failed: {e}")
+
+        return devs
+
+    @classmethod
+    def _connected_audio_endpoints_windows(cls) -> set:
+        try:
+            ps = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-PnpDevice -Class AudioEndpoint -Status OK | Select-Object -ExpandProperty FriendlyName"],
+                capture_output=True, text=True, timeout=2
+            )
+            return {line.strip().lower() for line in ps.stdout.splitlines() if line.strip()}
+        except Exception:
+            return set()
+
+    @classmethod
     def paired_devices(cls) -> list:
+        if sys.platform == "win32":
+            return cls._paired_devices_windows()
         out = cls._run("devices")
         devs = []
         for line in out.splitlines():
@@ -38,6 +113,15 @@ class Scanner:
 
     @classmethod
     def connected_devices(cls) -> list:
+        if sys.platform == "win32":
+            paired = cls.paired_devices()
+            active_endpoints = cls._connected_audio_endpoints_windows()
+            connected = []
+            for d in paired:
+                d_name = d["name"].lower()
+                if any(d_name in ep for ep in active_endpoints):
+                    connected.append(d)
+            return connected
         out = cls._run("devices", "Connected")
         devs = []
         for line in out.splitlines():
@@ -48,6 +132,9 @@ class Scanner:
 
     @classmethod
     def is_connected(cls, mac: str) -> bool:
+        if sys.platform == "win32":
+            conn = cls.connected_devices()
+            return any(d["mac"].upper() == mac.upper() for d in conn)
         out = cls._run("info", mac)
         return "Connected: yes" in out
 
