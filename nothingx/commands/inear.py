@@ -17,7 +17,7 @@ class InEarCommands:
             return p[1] == 0x01
         return False
 
-    def set(self, enable: bool):
+    def set(self, enable: bool) -> bool:
         import time
         val = 0x01 if enable else 0x00
         payload = bytes([0x02, 0x01, val])
@@ -26,9 +26,14 @@ class InEarCommands:
         except Exception:
             pass
         time.sleep(0.15)
+        # Verify if setting actually took effect
+        try:
+            return self.get() == enable
+        except Exception:
+            return False
 
-    def on(self):
-        self.set(True)
+    def on(self) -> bool:
+        return self.set(True)
 
-    def off(self):
-        self.set(False)
+    def off(self) -> bool:
+        return self.set(False)

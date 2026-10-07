@@ -16,7 +16,7 @@ class Device:
         self.battery = BatteryCommands(self._session)
         self.bass    = BassCommands(self._session)
         self.find    = FindCommands(self._session)
-        self.fit     = FitCommands(self._session)
+        self.fit     = FitCommands(self._session, self.name)
         self.inear   = InEarCommands(self._session)
         self.info    = InfoCommands(self._session)
         self.latency = LatencyCommands(self._session)

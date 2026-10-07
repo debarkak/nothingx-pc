@@ -105,21 +105,52 @@ def run(args, ear: Device):
         print(f"Firmware: {ear.info.firmware()}")
 
     elif args.cmd == "fetch":
+        import time
         print(f"Device:   {ear.name} ({ear.mac})")
-        print(f"Firmware: {ear.info.firmware()}")
+        try:
+            fw = ear.info.firmware()
+        except Exception:
+            fw = "Unknown"
+        print(f"Firmware: {fw}")
         print("---------------------------------")
-        b = ear.battery()
-        
-        l_act = "Yes" if b.left > 0 else "No"
-        r_act = "Yes" if b.right > 0 else "No"
-        print(f"Active:   L: {l_act}  |  R: {r_act}")
-        print(f"Battery:  L {b.left}%  |  R {b.right}%" + (f"  |  Case {b.case}%" if b.case else ""))
-        print(f"ANC Mode: {ear.anc.get().title()}")
-        print(f"Low Lag:  {'ON' if ear.latency.get() else 'OFF'}")
-        b_info = ear.bass.get()
-        b_st = f"ON (Level {b_info['level']})" if b_info['enabled'] else "OFF"
-        print(f"Bass:     {b_st}")
-        print(f"In-Ear:   {'ON' if ear.inear.get() else 'OFF'}")
+        time.sleep(0.05)
+        try:
+            b = ear.battery()
+            l_act = "Yes" if b.left > 0 else "No"
+            r_act = "Yes" if b.right > 0 else "No"
+            print(f"Active:   L: {l_act}  |  R: {r_act}")
+            print(f"Battery:  L {b.left}%  |  R {b.right}%" + (f"  |  Case {b.case}%" if b.case else ""))
+        except Exception:
+            print("Battery:  Unavailable")
+
+        time.sleep(0.05)
+        try:
+            anc = ear.anc.get()
+            print(f"ANC Mode: {anc.title()}")
+        except Exception:
+            print("ANC Mode: Unknown")
+
+        time.sleep(0.05)
+        try:
+            lag = ear.latency.get()
+            print(f"Low Lag:  {'ON' if lag else 'OFF'}")
+        except Exception:
+            print("Low Lag:  Unknown")
+
+        time.sleep(0.05)
+        try:
+            b_info = ear.bass.get()
+            b_st = f"ON (Level {b_info['level']})" if b_info['enabled'] else "OFF"
+            print(f"Bass:     {b_st}")
+        except Exception:
+            print("Bass:     Unknown")
+
+        time.sleep(0.05)
+        try:
+            inear = ear.inear.get()
+            print(f"In-Ear:   {'ON' if inear else 'OFF'}")
+        except Exception:
+            print("In-Ear:   Unknown")
 
     elif args.cmd == "latency":
         if args.action == "get":
@@ -155,14 +186,21 @@ def run(args, ear: Device):
         if args.action == "get":
             state = ear.inear.get()
             print(f"In-Ear Detection: {'ON' if state else 'OFF'}")
-        elif args.action == "on":
-            ear.inear.on()
-            print("In-Ear Detection: ON")
-        elif args.action == "off":
-            ear.inear.off()
-            print("In-Ear Detection: OFF")
+        elif args.action in ("on", "off"):
+            desired = args.action == "on"
+            ok = ear.inear.set(desired)
+            if ok:
+                print(f"In-Ear Detection: {'ON' if desired else 'OFF'}")
+            else:
+                current = "ON" if ear.inear.get() else "OFF"
+                print(f"error: failed to set In-Ear Detection on {ear.name} (protocol is WIP / unconfirmed). Current: {current}", file=sys.stderr)
+                sys.exit(1)
 
     elif args.cmd == "fit":
+        if not ear.fit.is_supported:
+            print(f"error: eartip fit test is not supported on {ear.name}.", file=sys.stderr)
+            sys.exit(1)
+
         print("Running eartip fit test — keep both earbuds in your ears...\n")
         print("\n\n\n\n\n") # Space for earbuds + text
         

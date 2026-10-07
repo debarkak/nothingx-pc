@@ -2,13 +2,25 @@ import time
 from ..wire import Cmd, Dir
 from ..responses import Parsers, FitTestResult
 from ..session import _StreamParser
+from ..errors import TimeoutError, NothingError
 
 
 class FitCommands:
-    def __init__(self, session):
+    def __init__(self, session, device_name: str = ""):
         self._s = session
+        self._device_name = device_name
+
+    @property
+    def is_supported(self) -> bool:
+        name = self._device_name.lower()
+        if "cmf" in name:
+            return False
+        return True
 
     def run(self, timeout=10.0, step_callback=None) -> FitTestResult:
+        if not self.is_supported:
+            raise NothingError(f"eartip fit test is not supported on {self._device_name or 'this device'}")
+
         # send the start command and wait for the ACK
         self._s.send(Cmd.FIT_TEST, Dir.SET, b"\x01")
         try:
@@ -39,4 +51,4 @@ class FitCommands:
                 if pkt.cmd == Cmd.FIT_RESULT:
                     return Parsers.fit_result(pkt.payload)
 
-        raise TimeoutError("Timed out waiting for fit test result — are both earbuds in your ears?")
+        raise TimeoutError(f"Timed out waiting for fit test result — make sure both earbuds are in your ears and your model ({self._device_name or 'device'}) supports fit testing.")
