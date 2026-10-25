@@ -11,6 +11,7 @@ if sys.platform == "win32":
 
 from nothingx import Device
 from nothingx.errors import NothingError
+from nothingx.battery_display import battery_percent
 
 
 HELP = """\
@@ -119,7 +120,8 @@ def run(args, ear: Device):
             l_act = "Yes" if b.left > 0 else "No"
             r_act = "Yes" if b.right > 0 else "No"
             print(f"Active:   L: {l_act}  |  R: {r_act}")
-            print(f"Battery:  L {b.left}%  |  R {b.right}%" + (f"  |  Case {b.case}%" if b.case else ""))
+            case = f"  |  Case {battery_percent(b.case)}" if b.case is not None else ""
+            print(f"Battery:  L {b.left}%  |  R {b.right}%{case}")
         except Exception:
             print("Battery:  Unavailable")
 

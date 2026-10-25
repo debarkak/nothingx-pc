@@ -5,6 +5,7 @@ import time
 import traceback
 import sys
 from nothingx.device import Device, DeviceNotFoundError
+from nothingx.battery_display import battery_percent
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
@@ -177,7 +178,7 @@ class NothingXGUI(ctk.CTk):
                 b = self.ear.battery()
                 l_str = f"L\n{b.left}%" if b.left > 0 else "L\n--%"
                 r_str = f"R\n{b.right}%" if b.right > 0 else "R\n--%"
-                c_str = f"Case\n{b.case}%" if b.case else "Case\n--%"
+                c_str = f"Case\n{battery_percent(b.case)}"
                 
                 anc_mode = self.ear.anc.get()
                 if self.is_cmf and anc_mode == "high":
